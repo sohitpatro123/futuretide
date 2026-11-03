@@ -94,7 +94,7 @@ function Earth() {
           const ll = vecToLatLon(e.point.x, e.point.y, e.point.z);
           if (ll.lat < -73 || ll.lat > -50) return;
           useTide.getState().addWaypoint(ll);
-          useTide.getState().setHint("Course mark dropped. Set Ahead, or let the helm follow the marks.");
+          useTide.getState().setHint("Course mark dropped. Hold W and the helm follows the marks.");
         }}
       >
         <sphereGeometry args={[RADIUS, 96, 64]} />
@@ -170,19 +170,18 @@ function OceanRig() {
       const coasting = Math.abs(steer) < 0.04 && Math.abs(throttle) < 0.04 && waypoints.length > 0;
       const cruise = 1.15 * boost;
       const target = coasting ? 1.15 : throttle * cruise;
-      const response = Math.abs(throttle) < 0.04 && !coasting ? 1.6 : 2.6;
+      const response = Math.abs(throttle) < 0.04 && !coasting ? 6 : 14;
       sim.speed += (target - sim.speed) * Math.min(1, dt * response);
       if (Math.abs(sim.speed) < 0.02 && Math.abs(throttle) < 0.04 && !coasting) sim.speed = 0;
 
       const reverse = sim.speed >= -0.05 ? 1 : -1;
-      sim.rudder = THREE.MathUtils.damp(sim.rudder, steer, 8, dt);
       if (Math.abs(steer) > 0.04) {
-        sim.yaw += steer * 1.85 * reverse * dt;
+        sim.yaw += steer * 2.8 * reverse * dt;
       } else if (waypoints.length) {
         const desired = yawToward(sim.lat, sim.lon, waypoints[0].lat, waypoints[0].lon);
         const d = Math.atan2(Math.sin(desired - sim.yaw), Math.cos(desired - sim.yaw));
-        sim.yaw += THREE.MathUtils.clamp(d, -1.5 * dt, 1.5 * dt);
-        if (angularDeg({ lat: sim.lat, lon: sim.lon }, waypoints[0]) < 0.55) {
+        sim.yaw += THREE.MathUtils.clamp(d, -3.4 * dt, 3.4 * dt);
+        if (angularDeg({ lat: sim.lat, lon: sim.lon }, waypoints[0]) < 1.35) {
           useTide.getState().shiftWaypoint();
         }
       }
@@ -190,7 +189,7 @@ function OceanRig() {
       fillTangent(sim.lat, sim.lon);
       forward.copy(east).multiplyScalar(-Math.sin(sim.yaw)).addScaledVector(north, Math.cos(sim.yaw));
       const p = latLonToVec(sim.lat, sim.lon, RADIUS);
-      next.set(p.x, p.y, p.z).addScaledVector(forward, sim.speed * 0.13 * dt);
+      next.set(p.x, p.y, p.z).addScaledVector(forward, sim.speed * 0.62 * dt);
       next.normalize();
       let lat = (Math.asin(THREE.MathUtils.clamp(next.y, -1, 1)) * 180) / Math.PI;
       let lon = (Math.atan2(next.z, next.x) * 180) / Math.PI;
@@ -203,7 +202,7 @@ function OceanRig() {
       if (nearTick.current > 0.2) {
         nearTick.current = 0;
         const near = nearestStation(sim.lat, sim.lon);
-        const id = near.deg < 1.7 ? near.station.id : null;
+        const id = near.deg < 2.8 ? near.station.id : null;
         if (id !== useTide.getState().nearStationId) useTide.getState().setNear(id);
       }
     }
@@ -266,8 +265,6 @@ function ShipMesh() {
         <boxGeometry args={[0.2, 0.08, 0.22]} />
         <meshStandardMaterial color="#8ee0e0" emissive="#1a6e70" emissiveIntensity={0.45} roughness={0.2} />
       </mesh>
-      <BridgeWheel />
-      <Rudder />
       <mesh position={[0, 0.55, -0.28]}>
         <cylinderGeometry args={[0.02, 0.02, 0.55, 6]} />
         <meshStandardMaterial color="#d7e6e8" />
@@ -281,42 +278,6 @@ function ShipMesh() {
         <meshStandardMaterial color="#0e3a40" />
       </mesh>
     </group>
-  );
-}
-
-function BridgeWheel() {
-  const ref = useRef<THREE.Group>(null);
-  useFrame(() => {
-    if (ref.current) ref.current.rotation.z = -sim.rudder * 1.35;
-  });
-  return (
-    <group ref={ref} position={[0, 0.46, -0.05]} rotation={[0.55, 0, 0]}>
-      <mesh>
-        <torusGeometry args={[0.07, 0.008, 6, 18]} />
-        <meshStandardMaterial color="#e37b4a" metalness={0.45} roughness={0.32} />
-      </mesh>
-      <mesh rotation={[0, 0, Math.PI / 4]}>
-        <boxGeometry args={[0.13, 0.012, 0.012]} />
-        <meshStandardMaterial color="#d7e6e8" />
-      </mesh>
-      <mesh rotation={[0, 0, -Math.PI / 4]}>
-        <boxGeometry args={[0.13, 0.012, 0.012]} />
-        <meshStandardMaterial color="#d7e6e8" />
-      </mesh>
-    </group>
-  );
-}
-
-function Rudder() {
-  const ref = useRef<THREE.Mesh>(null);
-  useFrame(() => {
-    if (ref.current) ref.current.rotation.y = -sim.rudder * 0.7;
-  });
-  return (
-    <mesh ref={ref} position={[0, 0.02, -0.62]}>
-      <boxGeometry args={[0.018, 0.14, 0.2]} />
-      <meshStandardMaterial color="#14343a" />
-    </mesh>
   );
 }
 

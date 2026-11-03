@@ -142,15 +142,15 @@ function DiveWorld({
       let vert = 0;
       if (isDown("Space") || isDown("KeyQ")) vert += 1;
       if (isDown("KeyC") || isDown("ControlLeft") || isDown("KeyE")) vert -= 1;
-      const target = throttle * 3.1;
-      body.speed += (target - body.speed) * Math.min(1, dt * 2.2);
+      const target = throttle * 11;
+      body.speed += (target - body.speed) * Math.min(1, dt * 10);
       const reverse = body.speed >= -0.05 ? 1 : -1;
-      if (Math.abs(steer) > 0.04) body.yaw += steer * 1.7 * reverse * dt;
+      if (Math.abs(steer) > 0.04) body.yaw += steer * 3.1 * reverse * dt;
       const fx = -Math.sin(body.yaw);
       const fz = -Math.cos(body.yaw);
       body.x += fx * body.speed * dt;
       body.z += fz * body.speed * dt;
-      body.y = THREE.MathUtils.clamp(body.y + vert * 2.4 * dt, -8.2, -0.85);
+      body.y = THREE.MathUtils.clamp(body.y + vert * 7.5 * dt, -8.2, -0.85);
       const radial = Math.hypot(body.x, body.z);
       if (radial > 14) {
         body.x *= 14 / radial;
@@ -161,7 +161,7 @@ function DiveWorld({
       sim.diverZ = body.z;
       sim.diverYaw = body.yaw;
       sim.diverSpeed = body.speed;
-      body.entry = Math.max(0, body.entry - dt / 2.6);
+      body.entry = Math.max(0, body.entry - dt / 0.65);
     } else {
       body.spin += dt * (0.18 + (1 - stress) * 0.12);
       body.x = Math.cos(body.spin) * (4 + stress);
@@ -192,7 +192,7 @@ function DiveWorld({
     const back = interactive ? 5.1 : 7.2;
     const camY = body.y + 1.35 + (interactive ? body.entry * 6 : 0.4);
     desiredCam.set(body.x - fx * back, camY, body.z - fz * back);
-    camera.position.lerp(desiredCam, 1 - Math.pow(0.0006, dt));
+    camera.position.lerp(desiredCam, 1 - Math.pow(0.0004, dt));
     camera.lookAt(body.x + fx * 3.2, body.y + 1.15 - body.entry * 0.4, body.z + fz * 3.2);
 
     paintSwarm(krill.current, t, stress, m.krill, "krill");
