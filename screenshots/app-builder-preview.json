@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "FutureTide",
+      "hasCanvas": false,
+      "bodyTextLen": 152,
+      "bodyTextHash": "1462b2696b1293a16f405698b71987c95ed90be466de8083bb77ad2649779d6a",
+      "bodyTextPrefix": "SOUTHERN OCEAN · THREE FUTURES FutureTide An illustrated FishCas",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "FutureTide",
+      "hasCanvas": false,
+      "bodyTextLen": 152,
+      "bodyTextHash": "1462b2696b1293a16f405698b71987c95ed90be466de8083bb77ad2649779d6a",
+      "bodyTextPrefix": "SOUTHERN OCEAN · THREE FUTURES FutureTide An illustrated FishCas",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}

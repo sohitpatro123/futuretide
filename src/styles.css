@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #071318;
+  --color-surface: #10262e;
+  --color-surface-2: #17343d;
+  --color-fg: #e7f3f5;
+  --color-muted: #8eacb3;
+  --color-line: #2c4a53;
+  --color-teal: #3dbebf;
+  --color-teal-ink: #042426;
+  --color-krill: #e37b4a;
+  --color-krill-ink: #2a1208;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --radius-panel: 1.25rem;
+}
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+    background: var(--color-bg);
+    color: var(--color-fg);
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    line-height: 1.5;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-teal);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+.ft-splash {
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(120% 70% at 50% 110%, color-mix(in oklab, var(--color-teal) 42%, transparent), transparent 58%),
+    radial-gradient(70% 40% at 85% 0%, color-mix(in oklab, var(--color-krill) 22%, transparent), transparent 52%);
+}
+
+.ft-panel {
+  background: color-mix(in oklab, var(--color-surface) 88%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-line) 90%, transparent);
+  border-radius: var(--radius-panel);
+  backdrop-filter: blur(16px);
+}
+
+.ft-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}
