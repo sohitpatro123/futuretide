@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { metricsAt, stationById, type PathwayId } from "@/lib/futuretide/model";
-import { isDown, setQaKeys } from "@/lib/futuretide/input";
+import { isDown, readSteer, readThrottle, setQaKeys } from "@/lib/futuretide/input";
 import { sim } from "@/lib/futuretide/sim";
 import { useTide, type Mode } from "@/lib/futuretide/store";
 
@@ -137,19 +137,15 @@ function DiveWorld({
 
     const body = local.current;
     if (interactive) {
-      let throttle = 0;
-      if (isDown("KeyW") || isDown("ArrowUp")) throttle += 1;
-      if (isDown("KeyS") || isDown("ArrowDown")) throttle -= 1;
-      let steer = 0;
-      if (isDown("KeyA") || isDown("ArrowLeft")) steer += 1;
-      if (isDown("KeyD") || isDown("ArrowRight")) steer -= 1;
+      const throttle = readThrottle();
+      const steer = readSteer();
       let vert = 0;
       if (isDown("Space") || isDown("KeyQ")) vert += 1;
       if (isDown("KeyC") || isDown("ControlLeft") || isDown("KeyE")) vert -= 1;
       const target = throttle * 3.1;
       body.speed += (target - body.speed) * Math.min(1, dt * 2.2);
       const reverse = body.speed >= -0.05 ? 1 : -1;
-      if (steer !== 0) body.yaw += steer * 1.7 * reverse * dt;
+      if (Math.abs(steer) > 0.04) body.yaw += steer * 1.7 * reverse * dt;
       const fx = -Math.sin(body.yaw);
       const fz = -Math.cos(body.yaw);
       body.x += fx * body.speed * dt;
@@ -398,11 +394,11 @@ function Diver({
     <group>
       <mesh position={[0, 0, 0.05]}>
         <capsuleGeometry args={[0.18, 0.55, 6, 10]} />
-        <meshStandardMaterial color="#12343c" roughness={0.45} />
+        <meshStandardMaterial color="#d7e6e8" roughness={0.45} />
       </mesh>
       <mesh position={[0, 0.42, 0.12]}>
         <sphereGeometry args={[0.16, 12, 12]} />
-        <meshStandardMaterial color="#102e34" roughness={0.4} />
+        <meshStandardMaterial color="#c5ddd8" roughness={0.4} />
       </mesh>
       <mesh position={[0, 0.42, 0.24]}>
         <sphereGeometry args={[0.09, 10, 10]} />

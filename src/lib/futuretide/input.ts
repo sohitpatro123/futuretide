@@ -1,7 +1,9 @@
-import type { PointerEvent } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 
 const held = new Set<string>();
 let qa: Set<string> | null = null;
+let wheel = 0;
+let order = 0;
 
 export function isDown(code: string) {
   if (qa) return qa.has(code);
@@ -10,6 +12,42 @@ export function isDown(code: string) {
 
 export function setQaKeys(codes: string[]) {
   qa = new Set(codes);
+}
+
+/** -1 starboard … +1 port. Springs back to 0 when the wheel is released. */
+export function wheelSteer() {
+  return wheel;
+}
+
+export function setWheelSteer(value: number) {
+  wheel = Math.max(-1, Math.min(1, value));
+}
+
+/** Latched engine order: -1 astern, 0 stop, +1 ahead. */
+export function engineOrder() {
+  return order;
+}
+
+export function setEngineOrder(value: number) {
+  order = Math.max(-1, Math.min(1, value));
+}
+
+export function readSteer() {
+  let steer = wheel;
+  if (isDown("KeyA") || isDown("ArrowLeft")) steer += 1;
+  if (isDown("KeyD") || isDown("ArrowRight")) steer -= 1;
+  if (steer > 1) steer = 1;
+  if (steer < -1) steer = -1;
+  return steer;
+}
+
+export function readThrottle() {
+  let throttle = order;
+  if (isDown("KeyW") || isDown("ArrowUp")) throttle += 1;
+  if (isDown("KeyS") || isDown("ArrowDown")) throttle -= 1;
+  if (throttle > 1) throttle = 1;
+  if (throttle < -1) throttle = -1;
+  return throttle;
 }
 
 export function bindInput() {
@@ -38,19 +76,23 @@ export function bindInput() {
 }
 
 export function holdProps(code: string) {
+  const release = (el: HTMLButtonElement, pointerId: number) => {
+    held.delete(code);
+    if (el.hasPointerCapture(pointerId)) el.releasePointerCapture(pointerId);
+  };
   return {
-    onPointerDown: (e: PointerEvent<HTMLButtonElement>) => {
+    onPointerDown: (e: ReactPointerEvent<HTMLButtonElement>) => {
       e.preventDefault();
       e.currentTarget.setPointerCapture(e.pointerId);
       held.add(code);
     },
-    onPointerUp: (e: PointerEvent<HTMLButtonElement>) => {
-      held.delete(code);
-      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-        e.currentTarget.releasePointerCapture(e.pointerId);
-      }
+    onPointerUp: (e: ReactPointerEvent<HTMLButtonElement>) => {
+      release(e.currentTarget, e.pointerId);
     },
-    onPointerCancel: () => {
+    onPointerCancel: (e: ReactPointerEvent<HTMLButtonElement>) => {
+      release(e.currentTarget, e.pointerId);
+    },
+    onLostPointerCapture: () => {
       held.delete(code);
     },
   };

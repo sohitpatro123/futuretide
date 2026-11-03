@@ -4,6 +4,7 @@ export const sim = {
   lon: -78,
   yaw: -Math.PI / 2,
   speed: 0,
+  rudder: 0,
   diverX: 0,
   diverY: -4.2,
   diverZ: 5,

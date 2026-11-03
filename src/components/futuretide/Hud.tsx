@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Anchor, Compass, Fish, Info, Pause, Play, Ship, Waves, X } from "lucide-react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { requestBrief } from "@/lib/futuretide/briefing";
-import { holdProps } from "@/lib/futuretide/input";
+import { engineOrder, holdProps, isDown, setEngineOrder, setWheelSteer, wheelSteer } from "@/lib/futuretide/input";
 import {
   FISHCAST_NOTE,
   PATHWAYS,
@@ -407,12 +407,14 @@ async function askGrok() {
 function ForcingDock() {
   const mode = useTide((s) => s.mode);
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3 md:justify-center">
-      <TouchHelm show={mode !== "compare"} />
-      <div className="pointer-events-auto">
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-2 px-2 pb-2 md:px-3 md:pb-3">
+      <div className="min-w-0">{mode !== "compare" ? <HelmWheel /> : null}</div>
+      <div className="pointer-events-auto shrink-0">
         <ForcingDial />
       </div>
-      <MobileTools />
+      <div className="flex min-w-0 justify-end lg:w-56">
+        <MobileTools />
+      </div>
     </div>
   );
 }
@@ -448,7 +450,7 @@ function ForcingDial() {
   };
 
   return (
-    <div className="w-40 md:w-52">
+    <div className="w-32 md:w-52">
       <svg
         viewBox="0 0 160 160"
         className="w-full"
@@ -516,17 +518,147 @@ function mix(a: number[], b: number[], t: number) {
   return `rgb(${c[0]} ${c[1]} ${c[2]})`;
 }
 
-function TouchHelm({ show }: { show: boolean }) {
-  if (!show) return <div className="hidden w-28 md:block md:w-0" />;
+function HelmWheel() {
+  const mode = useTide((s) => s.mode);
+  const diving = mode === "dive";
+  const [angle, setAngle] = useState(0);
+  const [order, setOrder] = useState(0);
+  const drag = useRef(false);
+  const wheelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let raf = 0;
+    let last = performance.now();
+    const loop = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      if (!drag.current) {
+        const w = wheelSteer();
+        const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+        const next = reduced || Math.abs(w) < 0.012 ? 0 : w * Math.exp(-dt * 7);
+        if (next !== w) setWheelSteer(next);
+      }
+      let s = wheelSteer();
+      if (isDown("KeyA") || isDown("ArrowLeft")) s += 1;
+      if (isDown("KeyD") || isDown("ArrowRight")) s -= 1;
+      s = Math.max(-1, Math.min(1, s));
+      const nextAngle = -s * 72;
+      setAngle((prev) => (Math.abs(prev - nextAngle) < 0.35 ? prev : nextAngle));
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  useEffect(() => {
+    const apply = (clientX: number, clientY: number) => {
+      const rect = wheelRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const dx = clientX - (rect.left + rect.width / 2);
+      const dy = rect.top + rect.height / 2 - clientY;
+      let deg = (Math.atan2(dx, dy) * 180) / Math.PI;
+      if (deg > 100) deg = 100;
+      if (deg < -100) deg = -100;
+      setWheelSteer(-deg / 100);
+    };
+    const move = (e: PointerEvent) => {
+      if (!drag.current) return;
+      apply(e.clientX, e.clientY);
+    };
+    const up = () => {
+      drag.current = false;
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+  }, []);
+
+  const heading = angle < -8 ? "Port" : angle > 8 ? "Starboard" : "Amidships";
+  const latch = (value: number) => {
+    const next = Math.abs(engineOrder() - value) < 0.05 ? 0 : value;
+    setEngineOrder(value === 0 ? 0 : next);
+    setOrder(value === 0 ? 0 : next);
+  };
+
   return (
-    <div className="pointer-events-auto grid grid-cols-3 gap-1 md:hidden">
-      <span />
-      <HelmKey code="KeyW" label="Ahead" />
-      <span />
-      <HelmKey code="KeyA" label="Port" />
-      <HelmKey code="KeyS" label="Back" />
-      <HelmKey code="KeyD" label="Stbd" />
+    <div className="pointer-events-auto flex flex-col items-center">
+      <div
+        ref={wheelRef}
+        role="slider"
+        aria-label="Ship's wheel"
+        aria-valuemin={-100}
+        aria-valuemax={100}
+        aria-valuenow={Math.round((-angle / 72) * 100)}
+        aria-valuetext={heading}
+        className="relative size-24 touch-none select-none md:size-36"
+        onPointerDown={(e) => {
+          e.preventDefault();
+          drag.current = true;
+          const rect = wheelRef.current?.getBoundingClientRect();
+          if (!rect) return;
+          const dx = e.clientX - (rect.left + rect.width / 2);
+          const dy = rect.top + rect.height / 2 - e.clientY;
+          let deg = (Math.atan2(dx, dy) * 180) / Math.PI;
+          if (deg > 100) deg = 100;
+          if (deg < -100) deg = -100;
+          setWheelSteer(-deg / 100);
+        }}
+      >
+        <div className="absolute inset-0" style={{ transform: `rotate(${angle}deg)` }}>
+          <WheelFace />
+        </div>
+        <span className="pointer-events-none absolute top-0 left-1/2 z-10 h-2.5 w-1 -translate-x-1/2 rounded-full bg-krill" />
+      </div>
+      <p className="mt-0.5 text-xs font-medium text-fg">{heading}</p>
+      <div className="mt-1 flex gap-1">
+        <OrderButton active={order > 0.4} label={diving ? "Swim" : "Ahead"} onClick={() => latch(1)} />
+        <OrderButton active={Math.abs(order) <= 0.4} label="Stop" onClick={() => latch(0)} />
+        <OrderButton active={order < -0.4} label="Back" onClick={() => latch(-1)} />
+      </div>
+      {diving ? (
+        <div className="mt-1 flex gap-1">
+          <HelmKey code="KeyQ" label="Rise" />
+          <HelmKey code="KeyE" label="Sink" />
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+function WheelFace() {
+  const spokes = [0, 45, 90, 135];
+  const grips = [0, 60, 120, 180, 240, 300];
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full" aria-hidden="true">
+      <circle cx="50" cy="50" r="46" fill="var(--color-surface)" stroke="var(--color-krill)" strokeWidth="5" />
+      <circle cx="50" cy="50" r="37" fill="none" stroke="var(--color-line)" strokeWidth="2" />
+      {spokes.map((a) => (
+        <line key={a} x1="50" y1="16" x2="50" y2="84" stroke="var(--color-fg)" strokeWidth="2" transform={`rotate(${a} 50 50)`} />
+      ))}
+      {grips.map((a) => {
+        const r = (a * Math.PI) / 180;
+        return <circle key={a} cx={50 + Math.sin(r) * 40} cy={50 - Math.cos(r) * 40} r="4.2" fill="var(--color-teal)" />;
+      })}
+      <circle cx="50" cy="50" r="8" fill="var(--color-krill)" />
+      <circle cx="50" cy="50" r="3" fill="var(--color-teal-ink)" />
+    </svg>
+  );
+}
+
+function OrderButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`h-11 min-w-11 rounded-xl px-2 text-xs font-medium ${active ? "bg-teal text-teal-ink" : "border border-line bg-surface/90 text-fg"}`}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -756,7 +888,7 @@ function StartCard() {
           onClick={() => {
             setSimLive(true);
             useTide.getState().start();
-            useTide.getState().setHint("Bransfield Strait is east of the bow. Hold W, or tap a ground to lay a course. A turns to port.");
+            useTide.getState().setHint("Drag the wheel to port or starboard, then set Ahead. A still turns to port.");
           }}
         >
           Start the voyage
